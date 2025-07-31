@@ -16,7 +16,7 @@ model = genai.GenerativeModel("gemini-pro")
 
 # === STREAMLIT UI ===
 st.set_page_config(page_title="💓 AI PCG Analyzer with Gemini", layout="centered")
-st.title("🫀 PCG Analyzer using Gemini AI")
+st.title("💓 PCG Analyzer using Gemini AI")
 st.markdown("Upload a **.wav** phonocardiogram (PCG) file to analyze heart sound abnormalities.")
 
 # === UPLOAD ===
