@@ -4,32 +4,26 @@ import numpy as np
 import openai
 import os
 
-# Set page config
-st.set_page_config(page_title="PCG Analyzer with ChatGPT", layout="centered")
-
 # Set OpenAI API Key from Streamlit secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Title
+# Page setup
+st.set_page_config(page_title="PCG Analyzer with ChatGPT", layout="centered")
 st.title("🫀 PCG Waveform Analyzer")
 st.markdown("Upload a **Phonocardiogram waveform image** (JPG/PNG), and get AI-assisted murmur diagnosis using ChatGPT.")
 
-# File uploader
+# Upload image
 uploaded_file = st.file_uploader("Upload waveform image", type=["png", "jpg", "jpeg"])
 
+# Feature extraction from PCG waveform
 def extract_waveform_features(image):
-    # Convert image to grayscale using PIL
-    image = image.convert("L")  # L mode = grayscale
+    image = image.convert("L")  # grayscale
     img_array = np.array(image)
-
-    # Simple thresholding (invert)
     binary = np.where(img_array < 128, 1, 0)
-
-    # Sum over vertical axis to detect waveform density
     vertical_sum = np.sum(binary, axis=0)
     peak_count = np.count_nonzero(vertical_sum > np.mean(vertical_sum))
 
-    # Heuristic analysis based on peak density
+    # Heuristic diagnosis
     if peak_count < 10:
         return "Normal heart sound pattern detected, likely no murmur."
     elif 10 <= peak_count <= 20:
@@ -39,24 +33,26 @@ def extract_waveform_features(image):
     else:
         return "Complex waveform with frequent murmur patterns; likely pathological."
 
+# ChatGPT-based diagnosis
 def get_chatgpt_diagnosis(observation_text):
-    prompt = f"""Analyze this PCG waveform description and give a medical interpretation.
-    
+    prompt = f"""
+Analyze this PCG waveform description and provide a medical interpretation.
+
 Waveform Summary:
 \"{observation_text}\"
 
-List possible diagnoses (like aortic stenosis, mitral regurgitation, normal, etc.) and explain why.
+List possible diagnoses (e.g., aortic stenosis, mitral regurgitation, normal) and explain why.
 """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "user", "content": prompt}
         ]
     )
+    return response.choices[0].message.content
 
-    return response["choices"][0]["message"]["content"]
-
+# Main app logic
 if uploaded_file:
     st.image(uploaded_file, caption="Uploaded PCG waveform", use_column_width=True)
     image = Image.open(uploaded_file)
