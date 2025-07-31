@@ -5,3 +5,4 @@ numpy
 soundfile
 fpdf
 google-generativeai
+scipy
