@@ -1,104 +1,150 @@
 import streamlit as st
-import librosa
-import librosa.display
 import numpy as np
+import scipy.io.wavfile as wavfile
 import matplotlib.pyplot as plt
-import soundfile as sf
-import tempfile
-import os
-import google.generativeai as genai
-from fpdf import FPDF
-import base64
+import io
 
-# === CONFIGURE GEMINI ===
-genai.configure(api_key="AIzaSyDjc-oeCb-yIswkwg9_-tFr7i3oDoualjQ")
-model = genai.GenerativeModel("gemini-pro")
+# --- App Configuration ---
+st.set_page_config(
+    page_title="AI PCG Diagnosis (Research Concept)",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# === STREAMLIT UI ===
-st.set_page_config(page_title="💓 AI PCG Analyzer with Gemini", layout="centered")
-st.title("💓 PCG Analyzer using Gemini AI")
-st.markdown("Upload a **.wav** phonocardiogram (PCG) file to analyze heart sound abnormalities.")
+# --- CRITICAL DISCLAIMER ---
+st.title("🫀 AI Phonocardiography Analysis")
+st.warning(
+    "**RESEARCH PROOF-OF-CONCEPT ONLY.** This app uses a **simulated AI logic engine**. "
+    "The diagnosis is NOT REAL and is chosen from pre-written templates for demonstration purposes. "
+    "It must be validated against echocardiography.",
+    icon="⚠️"
+)
 
-# === UPLOAD ===
-uploaded_file = st.file_uploader("📤 Upload PCG File (.wav)", type=["wav"])
 
-if uploaded_file:
-    st.audio(uploaded_file, format="audio/wav")
-    st.success("✅ File uploaded successfully!")
-
-    # === TEMP SAVE ===
-    temp_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-    temp_wav.write(uploaded_file.read())
-    temp_wav.close()
-
-    # === LOAD AUDIO ===
-    y, sr = librosa.load(temp_wav.name, sr=None)
-    duration = len(y) / sr
-    st.write(f"📏 Duration: `{duration:.2f}` seconds")
-    st.write(f"🔊 Sample Rate: `{sr}` Hz")
-
-    # === WAVEFORM ===
-    st.subheader("📉 Waveform")
-    fig, ax = plt.subplots()
-    librosa.display.waveshow(y, sr=sr, ax=ax)
-    ax.set_title("Waveform")
-    st.pyplot(fig)
-
-    # === SPECTROGRAM ===
-    st.subheader("🎞️ Spectrogram")
-    D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
-    fig2, ax2 = plt.subplots()
-    img = librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log', ax=ax2)
-    fig2.colorbar(img, ax=ax2, format="%+2.f dB")
-    ax2.set_title("Log-frequency power spectrogram")
-    st.pyplot(fig2)
-
-    # === MFCC FEATURES ===
-    st.subheader("🎛️ Extracted MFCC Features")
-    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
-    mfcc_mean = np.mean(mfcc, axis=1)
-    for i, val in enumerate(mfcc_mean):
-        st.write(f"MFCC {i+1}: {val:.2f}")
-
-    # === GEMINI DIAGNOSIS ===
-    st.subheader("🧠 Gemini AI Diagnostic Suggestion")
-    prompt = f"""
-    The following are mean MFCC features extracted from a phonocardiogram (PCG) recording:
-
-    {mfcc_mean.tolist()}
-
-    Analyze these features and determine whether this suggests any cardiac abnormalities such as murmurs, valve stenosis, regurgitation, or arrhythmia.
-    Provide a clear, clinical-style interpretation, including a possible diagnosis and why.
+# --- SIMULATED AI DIAGNOSTIC ENGINE ---
+# This is the core of the simulation. It uses ARBITRARY math to select a
+# pre-written diagnosis. THIS IS NOT A REAL MEDICAL ANALYSIS.
+def get_simulated_diagnosis(audio_data, sample_rate, valve_name):
     """
+    Simulates a diagnosis based on arbitrary audio features.
+    In a real application, this would be a call to a trained ML model.
+    """
+    # Calculate simple, non-medical metrics for demonstration logic
+    std_dev = np.std(audio_data)
+    peak_amplitude = np.max(np.abs(audio_data))
 
-    with st.spinner("Analyzing with Gemini AI..."):
-        try:
-            response = model.generate_content(prompt)
-            diagnosis = response.text
-            st.success("📋 AI Diagnosis:")
-            st.markdown(diagnosis)
-        except Exception as e:
-            st.error(f"Gemini API Error: {e}")
-            diagnosis = "Error during diagnosis."
+    # --- Pre-written Diagnostic Reports ---
+    report_normal = (
+        "**Likely Diagnosis:** Normal Heart Sounds\n\n"
+        "**Analysis:** S1 and S2 sounds are distinct and clear. The systolic and diastolic "
+        "periods are acoustically silent. No significant murmurs, gallops, or rubs detected. "
+        "The waveform is consistent with normal cardiac function."
+    )
+    report_as = (
+        "**Likely Diagnosis:** Aortic Stenosis (AS)\n\n"
+        "**Analysis:** The waveform shows a prominent **midsystolic murmur** with a "
+        "**crescendo-decrescendo ('diamond-shaped') pattern**. This is the pathognomonic "
+        "sign of turbulent blood flow across a narrowed aortic valve during systole. "
+        "S2 may be diminished. This finding is highly relevant for RVHD studies."
+    )
+    report_ms = (
+        "**Likely Diagnosis:** Mitral Stenosis (MS)\n\n"
+        "**Analysis:** A **low-frequency, rumbling, mid-diastolic murmur** is present. "
+        "This is the classic hallmark of turbulent blood flow across a narrowed mitral "
+        "valve during ventricular filling. S1 is often accentuated. This is the most "
+        "common valvular lesion in Rheumatic Heart Disease."
+    )
+    report_mr = (
+        "**Likely Diagnosis:** Mitral Regurgitation (MR)\n\n"
+        "**Analysis:** A **holosystolic (pansystolic), high-pitched, 'blowing' murmur** "
+        "is detected, starting at S1 and continuing to S2. This is caused by blood "
+        "leaking backward through an incompetent mitral valve during systole. The murmur "
+        "may obscure the S2 sound."
+    )
 
-    # === PDF REPORT DOWNLOAD ===
-    st.subheader("📄 Download Diagnosis Report")
+    # --- SIMULATED LOGIC: Pick a report based on arbitrary metrics ---
+    # This logic is for demonstration only.
+    st.info(f"Simulated Logic Trigger for {valve_name}: std_dev={std_dev:.0f}, peak={peak_amplitude:.0f}")
 
-    def create_pdf(text, filename="pcg_diagnosis.pdf"):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 10, "PCG AI Diagnosis Report", align='C')
-        pdf.ln()
-        pdf.multi_cell(0, 10, f"Diagnosis:\n\n{text}")
-        pdf.output(filename)
+    if valve_name == "Aortic Valve":
+        if std_dev > 3500:
+            return report_as
+        else:
+            return report_normal
+    elif valve_name == "Mitral Valve":
+        if 1500 < std_dev <= 3500:
+            return report_ms
+        elif std_dev <= 1500 and peak_amplitude > 10000:
+            return report_mr
+        else:
+            return report_normal
+    else: # For TV and PV
+        return report_normal
 
-    pdf_file = "pcg_diagnosis.pdf"
-    create_pdf(diagnosis, pdf_file)
 
-    with open(pdf_file, "rb") as file:
-        b64 = base64.b64encode(file.read()).decode()
-        href = f'<a href="data:application/pdf;base64,{b64}" download="pcg_diagnosis.pdf">📥 Download Report as PDF</a>'
-        st.markdown(href, unsafe_allow_html=True)
+# --- UI & Plotting Functions ---
+def plot_waveform(sample_rate, audio_data, valve_name):
+    """Plots the audio waveform."""
+    fig, ax = plt.subplots(figsize=(10, 2))
+    duration = len(audio_data) / sample_rate
+    time = np.linspace(0., duration, len(audio_data))
+    ax.plot(time, audio_data, lw=0.7)
+    ax.set_title(f"{valve_name} Waveform")
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Amplitude")
+    ax.grid(True, linestyle='--', alpha=0.7)
+    ax.set_xlim(0, min(duration, 8)) # Show max 8s
+    return fig
 
-    os.remove(temp_wav.name)
+# --- SIDEBAR ---
+st.sidebar.header("📖 About This Project")
+st.sidebar.info(
+    "This application is a conceptual tool for the research project: 'Prospective study "
+    "of an application of AI in early detection of RVHD in asymptomatic individuals "
+    "using a non-invasive method of Phonocardiography.'"
+)
+st.sidebar.header("⚠️ Disclaimer")
+st.sidebar.error(
+    "The AI diagnosis is simulated. The logic engine is a placeholder. "
+    "All findings must be correlated with echocardiography."
+)
+
+
+# --- MAIN APP LAYOUT ---
+st.header("1. Upload Patient PCG Files (.wav)")
+col1, col2 = st.columns(2)
+col3, col4 = st.columns(2)
+
+valve_files = {
+    "Aortic Valve": col1.file_uploader("Aortic Valve (AV)"),
+    "Pulmonary Valve": col2.file_uploader("Pulmonary Valve (PV)"),
+    "Mitral Valve": col3.file_uploader("Mitral Valve (MV)"),
+    "Tricuspid Valve": col4.file_uploader("Tricuspid Valve (TV)"),
+}
+st.markdown("---")
+
+st.header("2. AI Analysis & Report")
+if st.button("🔬 Generate Diagnostic Report", type="primary", use_container_width=True):
+    if not any(valve_files.values()):
+        st.error("Please upload at least one audio file to generate a report.")
+    else:
+        for valve_name, uploaded_file in valve_files.items():
+            if uploaded_file is not None:
+                st.subheader(f"Analysis for: {valve_name}")
+                audio_buffer = io.BytesIO(uploaded_file.getvalue())
+                try:
+                    sample_rate, audio_data = wavfile.read(audio_buffer)
+
+                    # Display waveform
+                    fig = plot_waveform(sample_rate, audio_data, valve_name)
+                    st.pyplot(fig)
+
+                    # Get and display the simulated diagnosis
+                    st.markdown("##### 🤖 AI-Generated Report")
+                    diagnosis_report = get_simulated_diagnosis(audio_data, sample_rate, valve_name)
+                    st.write(diagnosis_report)
+                    st.markdown("---")
+
+                except Exception as e:
+                    st.error(f"Error processing {uploaded_file.name}: {e}. Please ensure it is a valid WAV file.")
+                
