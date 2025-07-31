@@ -1,64 +1,41 @@
 import streamlit as st
-import openai
 import librosa
 import numpy as np
-import io
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 
-# Set your OpenAI API key
-openai.api_key = "sk-...your-valid-key..."
+# Load DeepSeek model from Hugging Face
+@st.cache_resource
+def load_model():
+    tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/deepseek-coder-6.7b-instruct")
+    model = AutoModelForCausalLM.from_pretrained("deepseek-ai/deepseek-coder-6.7b-instruct", torch_dtype=torch.float16, device_map="auto")
+    return tokenizer, model
 
-st.set_page_config(page_title="PCG Waveform Analyzer", layout="centered")
-st.title("🫀 PCG Waveform Analyzer with ChatGPT")
+tokenizer, model = load_model()
 
-# Upload .wav file
-uploaded_file = st.file_uploader("Upload a PCG (.wav) file", type=["wav"])
+# Extract basic PCG features
+def extract_features(file):
+    y, sr = librosa.load(file, sr=None)
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+    return mfcc.mean(axis=1)
 
-def extract_features(audio, sr):
-    duration = librosa.get_duration(y=audio, sr=sr)
-    rms = np.mean(librosa.feature.rms(y=audio))
-    zcr = np.mean(librosa.feature.zero_crossing_rate(y=audio))
-    return duration, rms, zcr
-
-def get_chatgpt_diagnosis(prompt_summary):
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You're a medical expert in analyzing heart sound waveforms (PCG)."},
-                {"role": "user", "content": prompt_summary}
-            ]
-        )
-        diagnosis = response["choices"][0]["message"]["content"]
-        return diagnosis
-    except Exception as e:
-        st.error(f"❌ Error during ChatGPT analysis: {e}")
-        return None
-
-if uploaded_file is not None:
-    st.audio(uploaded_file, format="audio/wav")
+# Generate diagnosis using DeepSeek
+def generate_diagnosis(observations):
+    prompt = f"""You are a medical AI trained to diagnose heart sounds based on phonocardiogram features.
+The following features were extracted from the patient's heart sound: {observations.tolist()}.
+What is the most likely diagnosis? Provide reasoning."""
     
-    try:
-        # Load audio
-        audio, sr = librosa.load(uploaded_file, sr=None)
-        duration, rms, zcr = extract_features(audio, sr)
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    output = model.generate(**inputs, max_new_tokens=150)
+    return tokenizer.decode(output[0], skip_special_tokens=True)
 
-        st.success("✅ Audio loaded and features extracted!")
-        st.write(f"📏 Duration: {duration:.2f} sec")
-        st.write(f"📈 RMS Energy: {rms:.4f}")
-        st.write(f"🔀 Zero Crossing Rate: {zcr:.4f}")
+# Streamlit UI
+st.title("AI Diagnosis of PCG using DeepSeek")
+uploaded_file = st.file_uploader("Upload PCG (.wav) file", type=["wav"])
 
-        # Prepare prompt
-        prompt = (
-            f"I have recorded a heart sound waveform of duration {duration:.2f} seconds. "
-            f"The RMS energy is {rms:.4f} and the zero-crossing rate is {zcr:.4f}. "
-            f"Based on this waveform summary, could you provide a possible cardiac condition (e.g., murmur, stenosis, regurgitation)?"
-        )
-
-        if st.button("🔍 Analyze with ChatGPT"):
-            diagnosis = get_chatgpt_diagnosis(prompt)
-            if diagnosis:
-                st.subheader("🧠 ChatGPT Diagnosis:")
-                st.write(diagnosis)
-
-    except Exception as e:
-        st.error(f"❌ Error loading the file: {e}")
+if uploaded_file:
+    with st.spinner("Analyzing..."):
+        features = extract_features(uploaded_file)
+        diagnosis = generate_diagnosis(features)
+        st.success("Diagnosis Complete:")
+        st.write(diagnosis)
