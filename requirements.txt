@@ -1,6 +1,5 @@
 streamlit
-openai
 librosa
-matplotlib
-numpy
+torch
+transformers
 soundfile
