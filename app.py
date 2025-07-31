@@ -3,7 +3,6 @@ from PIL import Image
 import numpy as np
 import openai
 import os
-import cv2
 
 # Set page config
 st.set_page_config(page_title="PCG Analyzer with ChatGPT", layout="centered")
@@ -19,17 +18,18 @@ st.markdown("Upload a **Phonocardiogram waveform image** (JPG/PNG), and get AI-a
 uploaded_file = st.file_uploader("Upload waveform image", type=["png", "jpg", "jpeg"])
 
 def extract_waveform_features(image):
-    # Convert to grayscale
-    img_gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+    # Convert image to grayscale using PIL
+    image = image.convert("L")  # L mode = grayscale
+    img_array = np.array(image)
 
-    # Threshold to enhance waveform
-    _, binary = cv2.threshold(img_gray, 127, 255, cv2.THRESH_BINARY_INV)
+    # Simple thresholding (invert)
+    binary = np.where(img_array < 128, 1, 0)
 
-    # Count waveform vertical density
+    # Sum over vertical axis to detect waveform density
     vertical_sum = np.sum(binary, axis=0)
     peak_count = np.count_nonzero(vertical_sum > np.mean(vertical_sum))
 
-    # Heuristic analysis
+    # Heuristic analysis based on peak density
     if peak_count < 10:
         return "Normal heart sound pattern detected, likely no murmur."
     elif 10 <= peak_count <= 20:
