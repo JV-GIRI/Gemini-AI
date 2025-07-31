@@ -11,7 +11,7 @@ from fpdf import FPDF
 import base64
 
 # === CONFIGURE GEMINI ===
-genai.configure(api_key="AIzaSyCb5kK8XnscVVfE0wItNT0c-hZbWyqzFaA")
+genai.configure(api_key="AIzaSyDjc-oeCb-yIswkwg9_-tFr7i3oDoualjQ")
 model = genai.GenerativeModel("gemini-pro")
 
 # === STREAMLIT UI ===
