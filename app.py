@@ -11,7 +11,7 @@ from PIL import Image
 from google.generativeai import configure, GenerativeModel
 
 # Configure Gemini
-GEMINI_API_KEY = "GEMINI_API_KEY"
+GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"
 configure(api_key=GEMINI_API_KEY)
 gemini_model = GenerativeModel("gemini-pro-vision")
 
