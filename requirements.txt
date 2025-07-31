@@ -1,8 +1,4 @@
 streamlit
-librosa
-matplotlib
 numpy
-soundfile
-fpdf
-google-generativeai
 scipy
+matplotlib
