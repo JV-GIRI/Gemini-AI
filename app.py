@@ -9,6 +9,7 @@ import json
 import os
 from PIL import Image
 from google.generativeai import configure, GenerativeModel
+import tempfile
 
 # Configure Gemini
 GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"
@@ -35,29 +36,49 @@ def save_case(case):
         json.dump(cases, f)
 
 # App Header
-st.title("\U0001F493 AI Phonocardiography Analysis")
+st.title("❤️‍🔥 AI Phonocardiography Analysis")
 st.warning("**RESEARCH PROOF-OF-CONCEPT ONLY.** Diagnosis is SIMULATED or AI-generated.", icon="⚠️")
 
 # Simulated Diagnosis
 SIMULATED_DIAGNOSES = {
     "normal": "**Likely Diagnosis:** Normal Heart Sounds\n\n**Analysis:** Normal S1/S2, no murmurs.",
     "as": "**Likely Diagnosis:** Aortic Stenosis (AS)\n\n**Analysis:** Crescendo-decrescendo midsystolic murmur.",
+    "ar": "**Likely Diagnosis:** Aortic Regurgitation (AR)\n\n**Analysis:** High-frequency decrescendo diastolic murmur.",
+    "ps": "**Likely Diagnosis:** Pulmonary Stenosis (PS)\n\n**Analysis:** Systolic murmur with ejection click.",
+    "pr": "**Likely Diagnosis:** Pulmonary Regurgitation (PR)\n\n**Analysis:** Early diastolic murmur with high pitch.",
     "ms": "**Likely Diagnosis:** Mitral Stenosis (MS)\n\n**Analysis:** Low-frequency diastolic rumbling murmur.",
-    "mr": "**Likely Diagnosis:** Mitral Regurgitation (MR)\n\n**Analysis:** Holosystolic blowing murmur."
+    "mr": "**Likely Diagnosis:** Mitral Regurgitation (MR)\n\n**Analysis:** Holosystolic blowing murmur.",
+    "ts": "**Likely Diagnosis:** Tricuspid Stenosis (TS)\n\n**Analysis:** Diastolic murmur increases with inspiration.",
+    "tr": "**Likely Diagnosis:** Tricuspid Regurgitation (TR)\n\n**Analysis:** Holosystolic murmur at lower sternal border."
 }
 
 def get_simulated_diagnosis(audio_data, sample_rate, valve):
     std_dev = np.std(audio_data)
     peak_amp = np.max(np.abs(audio_data))
-    st.info(f"SimLogic - {valve}: std_dev={std_dev:.0f}, peak={peak_amp:.0f}")
+    zero_crossings = np.count_nonzero(np.diff(np.sign(audio_data)))
+    st.info(f"SimLogic - {valve}: std_dev={std_dev:.0f}, peak={peak_amp:.0f}, zero_crossings={zero_crossings}")
 
-    if valve == "Aortic Valve" and std_dev > 3500:
-        return SIMULATED_DIAGNOSES["as"]
+    if valve == "Aortic Valve":
+        if std_dev > 4000:
+            return SIMULATED_DIAGNOSES["as"]
+        elif peak_amp > 12000:
+            return SIMULATED_DIAGNOSES["ar"]
+    elif valve == "Pulmonary Valve":
+        if std_dev > 3500:
+            return SIMULATED_DIAGNOSES["ps"]
+        elif peak_amp > 11000:
+            return SIMULATED_DIAGNOSES["pr"]
     elif valve == "Mitral Valve":
         if 1500 < std_dev <= 3500:
             return SIMULATED_DIAGNOSES["ms"]
         elif std_dev <= 1500 and peak_amp > 10000:
             return SIMULATED_DIAGNOSES["mr"]
+    elif valve == "Tricuspid Valve":
+        if std_dev < 1500 and zero_crossings > 7000:
+            return SIMULATED_DIAGNOSES["ts"]
+        elif peak_amp > 8000:
+            return SIMULATED_DIAGNOSES["tr"]
+
     return SIMULATED_DIAGNOSES["normal"]
 
 # Waveform Plot with Controls
@@ -75,10 +96,15 @@ def plot_waveform(sample_rate, audio_data, valve, amp_scale, noise_thresh, max_d
     return fig
 
 # Gemini Diagnosis
-def diagnose_with_gemini(image, valve):
+def diagnose_with_gemini_auto(fig, valve):
     try:
-        img = Image.open(image)
-        response = gemini_model.generate_content(["Identify possible valvular heart diseases (AS, AR, MS, MR, TS, TR, PS, PR) based on this PCG graph for " + valve, img])
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png')
+        buf.seek(0)
+        image = Image.open(buf)
+        response = gemini_model.generate_content([
+            f"Identify valvular heart diseases (AS, AR, MS, MR, TS, TR, PS, PR) based on this PCG waveform for {valve}.", image
+        ])
         return response.text
     except Exception as e:
         return f"Gemini Diagnosis Error: {e}"
@@ -125,17 +151,15 @@ if st.button("🔬 Generate Diagnostic Report", type="primary"):
             fig = plot_waveform(sr, data, valve, amp, thresh, max_dur)
             st.pyplot(fig)
 
-            report = get_simulated_diagnosis(data, sr, valve)
+            sim_report = get_simulated_diagnosis(data, sr, valve)
             st.markdown("##### 🤖 Simulated Report")
-            st.write(report)
-            analysis_results[valve] = report
+            st.write(sim_report)
+            analysis_results[valve] = sim_report
 
-            st.markdown("##### 🧠 Gemini Diagnosis (Upload PCG Image)")
-            gemini_img = st.file_uploader(f"Upload PCG Image for {valve}", type=["png", "jpg", "jpeg"], key=valve)
-            if gemini_img:
-                gemini_result = diagnose_with_gemini(gemini_img, valve)
-                st.success(gemini_result)
-                analysis_results[valve + "_gemini"] = gemini_result
+            st.markdown("##### 🧠 Gemini Diagnosis")
+            gemini_result = diagnose_with_gemini_auto(fig, valve)
+            st.success(gemini_result)
+            analysis_results[valve + "_gemini"] = gemini_result
             st.markdown("---")
 
 # Save Case
@@ -165,4 +189,3 @@ if st.button("📂 View Case History"):
             st.markdown(f"**{key}:**")
             st.write(value)
         st.markdown("---")
-            
