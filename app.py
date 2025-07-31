@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # --- CRITICAL DISCLAIMER ---
-st.title("🫀 AI Phonocardiography Analysis")
+st.title("💓 AI Phonocardiography Analysis")
 st.warning(
     "**RESEARCH PROOF-OF-CONCEPT ONLY.** This app uses a **simulated AI logic engine**. "
     "The diagnosis is NOT REAL and is chosen from pre-written templates for demonstration purposes. "
