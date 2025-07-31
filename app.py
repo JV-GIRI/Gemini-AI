@@ -2,72 +2,63 @@ import streamlit as st
 import openai
 import librosa
 import numpy as np
-import tempfile
+import io
 
-# Initialize OpenAI client (requires openai>=1.0.0)
-client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Set your OpenAI API key
+openai.api_key = "sk-...your-valid-key..."
 
-st.set_page_config(page_title="PCG Audio Analyzer with ChatGPT", layout="centered")
-st.title("🫀 PCG (.wav) Audio Analyzer with ChatGPT")
-st.write("Upload a PCG heart sound (.wav) file to get a diagnostic interpretation.")
+st.set_page_config(page_title="PCG Waveform Analyzer", layout="centered")
+st.title("🫀 PCG Waveform Analyzer with ChatGPT")
 
-# Upload PCG .wav file
-uploaded_file = st.file_uploader("Upload PCG (.wav) file", type=["wav"])
+# Upload .wav file
+uploaded_file = st.file_uploader("Upload a PCG (.wav) file", type=["wav"])
+
+def extract_features(audio, sr):
+    duration = librosa.get_duration(y=audio, sr=sr)
+    rms = np.mean(librosa.feature.rms(y=audio))
+    zcr = np.mean(librosa.feature.zero_crossing_rate(y=audio))
+    return duration, rms, zcr
+
+def get_chatgpt_diagnosis(prompt_summary):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You're a medical expert in analyzing heart sound waveforms (PCG)."},
+                {"role": "user", "content": prompt_summary}
+            ]
+        )
+        diagnosis = response["choices"][0]["message"]["content"]
+        return diagnosis
+    except Exception as e:
+        st.error(f"❌ Error during ChatGPT analysis: {e}")
+        return None
 
 if uploaded_file is not None:
     st.audio(uploaded_file, format="audio/wav")
-    st.success("✅ Audio uploaded successfully!")
-
-    # Load audio with librosa
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        tmp_file_path = tmp_file.name
-
+    
     try:
-        y, sr = librosa.load(tmp_file_path, sr=None)
-        duration = librosa.get_duration(y=y, sr=sr)
-        rms = np.mean(librosa.feature.rms(y=y))
+        # Load audio
+        audio, sr = librosa.load(uploaded_file, sr=None)
+        duration, rms, zcr = extract_features(audio, sr)
 
-        st.subheader("🎧 Audio Features Extracted")
-        st.write(f"**Duration**: {duration:.2f} seconds")
-        st.write(f"**RMS Energy**: {rms:.6f}")
+        st.success("✅ Audio loaded and features extracted!")
+        st.write(f"📏 Duration: {duration:.2f} sec")
+        st.write(f"📈 RMS Energy: {rms:.4f}")
+        st.write(f"🔀 Zero Crossing Rate: {zcr:.4f}")
 
-        # Button to analyze using ChatGPT
-        if st.button("🧠 Analyze with ChatGPT"):
-            with st.spinner("Analyzing with ChatGPT..."):
-                try:
-                    response = client.chat.completions.create(
-                        model="gpt-4",
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": (
-                                    "You are a skilled cardiologist analyzing heart sounds from phonocardiogram (PCG) audio data. "
-                                    "Based on features like duration, energy, frequency content, and rhythm, provide a diagnostic impression."
-                                ),
-                            },
-                            {
-                                "role": "user",
-                                "content": (
-                                    f"I have uploaded a PCG .wav file.\n"
-                                    f"Extracted Features:\n"
-                                    f"- Duration: {duration:.2f} seconds\n"
-                                    f"- RMS Energy: {rms:.6f}\n\n"
-                                    f"Based on these and common PCG interpretations (e.g., murmur, gallop, stenosis, regurgitation), give a detailed diagnostic analysis."
-                                ),
-                            },
-                        ],
-                        temperature=0.3,
-                        max_tokens=600,
-                    )
+        # Prepare prompt
+        prompt = (
+            f"I have recorded a heart sound waveform of duration {duration:.2f} seconds. "
+            f"The RMS energy is {rms:.4f} and the zero-crossing rate is {zcr:.4f}. "
+            f"Based on this waveform summary, could you provide a possible cardiac condition (e.g., murmur, stenosis, regurgitation)?"
+        )
 
-                    result = response.choices[0].message.content
-                    st.success("✅ Diagnostic Impression Received!")
-                    st.subheader("🩺 ChatGPT Analysis")
-                    st.write(result)
+        if st.button("🔍 Analyze with ChatGPT"):
+            diagnosis = get_chatgpt_diagnosis(prompt)
+            if diagnosis:
+                st.subheader("🧠 ChatGPT Diagnosis:")
+                st.write(diagnosis)
 
-                except Exception as e:
-                    st.error(f"❌ Error during ChatGPT analysis: {e}")
-
-    except Exception as err:
-        st.error(f"❌ Could not process audio: {err}")
+    except Exception as e:
+        st.error(f"❌ Error loading the file: {e}")
