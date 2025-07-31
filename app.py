@@ -22,18 +22,10 @@ st.warning(
 
 
 # --- SIMULATED AI DIAGNOSTIC ENGINE ---
-# This is the core of the simulation. It uses ARBITRARY math to select a
-# pre-written diagnosis. THIS IS NOT A REAL MEDICAL ANALYSIS.
 def get_simulated_diagnosis(audio_data, sample_rate, valve_name):
-    """
-    Simulates a diagnosis based on arbitrary audio features.
-    In a real application, this would be a call to a trained ML model.
-    """
-    # Calculate simple, non-medical metrics for demonstration logic
     std_dev = np.std(audio_data)
     peak_amplitude = np.max(np.abs(audio_data))
 
-    # --- Pre-written Diagnostic Reports ---
     report_normal = (
         "**Likely Diagnosis:** Normal Heart Sounds\n\n"
         "**Analysis:** S1 and S2 sounds are distinct and clear. The systolic and diastolic "
@@ -62,8 +54,6 @@ def get_simulated_diagnosis(audio_data, sample_rate, valve_name):
         "may obscure the S2 sound."
     )
 
-    # --- SIMULATED LOGIC: Pick a report based on arbitrary metrics ---
-    # This logic is for demonstration only.
     st.info(f"Simulated Logic Trigger for {valve_name}: std_dev={std_dev:.0f}, peak={peak_amplitude:.0f}")
 
     if valve_name == "Aortic Valve":
@@ -78,25 +68,53 @@ def get_simulated_diagnosis(audio_data, sample_rate, valve_name):
             return report_mr
         else:
             return report_normal
-    else: # For TV and PV
+    else:
         return report_normal
 
 
-# --- UI & Plotting Functions ---
-def plot_waveform(sample_rate, audio_data, valve_name):
-    """Plots the audio waveform."""
+# --- WAVEFORM PLOTTING ---
+def plot_waveform(sample_rate, audio_data, valve_name, max_duration, amp_scale, noise_thresh):
     fig, ax = plt.subplots(figsize=(10, 2))
     duration = len(audio_data) / sample_rate
     time = np.linspace(0., duration, len(audio_data))
+
+    # Apply amplitude scaling
+    audio_data = audio_data * amp_scale
+
+    # Apply basic noise reduction
+    if noise_thresh > 0:
+        audio_data = np.where(np.abs(audio_data) < noise_thresh, 0, audio_data)
+
     ax.plot(time, audio_data, lw=0.7)
     ax.set_title(f"{valve_name} Waveform")
     ax.set_xlabel("Time [s]")
     ax.set_ylabel("Amplitude")
     ax.grid(True, linestyle='--', alpha=0.7)
-    ax.set_xlim(0, min(duration, 8)) # Show max 8s
+    ax.set_xlim(0, min(duration, max_duration))
     return fig
 
+
 # --- SIDEBAR ---
+st.sidebar.header("🧑‍⚕️ Patient Information")
+name = st.sidebar.text_input("Name")
+age = st.sidebar.number_input("Age", min_value=0, max_value=120, value=30)
+gender = st.sidebar.selectbox("Gender", ["Male", "Female", "Other"])
+height = st.sidebar.number_input("Height (cm)", min_value=50.0, max_value=250.0, value=170.0)
+weight = st.sidebar.number_input("Weight (kg)", min_value=10.0, max_value=200.0, value=65.0)
+phone = st.sidebar.text_input("Phone Number")
+
+# BMI calculation
+if height > 0:
+    height_m = height / 100
+    bmi = weight / (height_m ** 2)
+    st.sidebar.markdown(f"**BMI:** {bmi:.1f}")
+
+# Controls for waveform visualization
+st.sidebar.header("🎚️ Waveform Controls")
+max_duration = st.sidebar.slider("Max Duration (s)", min_value=1, max_value=10, value=8)
+amp_scale = st.sidebar.slider("Amplitude Scaling", min_value=0.1, max_value=3.0, value=1.0)
+noise_thresh = st.sidebar.slider("Noise Reduction Threshold", min_value=0, max_value=1000, value=0)
+
 st.sidebar.header("📖 About This Project")
 st.sidebar.info(
     "This application is a conceptual tool for the research project: 'Prospective study "
@@ -109,17 +127,16 @@ st.sidebar.error(
     "All findings must be correlated with echocardiography."
 )
 
-
-# --- MAIN APP LAYOUT ---
+# --- MAIN INTERFACE ---
 st.header("1. Upload Patient PCG Files (.wav)")
 col1, col2 = st.columns(2)
 col3, col4 = st.columns(2)
 
 valve_files = {
-    "Aortic Valve": col1.file_uploader("Aortic Valve (AV)"),
-    "Pulmonary Valve": col2.file_uploader("Pulmonary Valve (PV)"),
-    "Mitral Valve": col3.file_uploader("Mitral Valve (MV)"),
-    "Tricuspid Valve": col4.file_uploader("Tricuspid Valve (TV)"),
+    "Aortic Valve": col1.file_uploader("Aortic Valve (AV)", type=["wav"]),
+    "Pulmonary Valve": col2.file_uploader("Pulmonary Valve (PV)", type=["wav"]),
+    "Mitral Valve": col3.file_uploader("Mitral Valve (MV)", type=["wav"]),
+    "Tricuspid Valve": col4.file_uploader("Tricuspid Valve (TV)", type=["wav"]),
 }
 st.markdown("---")
 
@@ -135,11 +152,11 @@ if st.button("🔬 Generate Diagnostic Report", type="primary", use_container_wi
                 try:
                     sample_rate, audio_data = wavfile.read(audio_buffer)
 
-                    # Display waveform
-                    fig = plot_waveform(sample_rate, audio_data, valve_name)
+                    # Plot waveform with controls
+                    fig = plot_waveform(sample_rate, audio_data, valve_name, max_duration, amp_scale, noise_thresh)
                     st.pyplot(fig)
 
-                    # Get and display the simulated diagnosis
+                    # Display report
                     st.markdown("##### 🤖 AI-Generated Report")
                     diagnosis_report = get_simulated_diagnosis(audio_data, sample_rate, valve_name)
                     st.write(diagnosis_report)
@@ -147,4 +164,3 @@ if st.button("🔬 Generate Diagnostic Report", type="primary", use_container_wi
 
                 except Exception as e:
                     st.error(f"Error processing {uploaded_file.name}: {e}. Please ensure it is a valid WAV file.")
-                
