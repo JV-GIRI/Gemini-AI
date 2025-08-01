@@ -37,7 +37,7 @@ def save_case(case):
 
 # App Header
 st.title("❤️‍🔥 AI Phonocardiography Analysis")
-st.warning("**RESEARCH PROOF-OF-CONCEPT ONLY.** Diagnosis is SIMULATED or AI-generated.", icon="⚠️")
+st.warning("**RESEARCH PURPOSE ONLY.** THE PROSPECTIVE STUDY OF AN APPLICATION OF ARTIFICIAL INTELLIGENCE IN EARLY DETECTION OF RHEUMATIC VALVULAR HEART DISEASE IN ASYMPTOMATIC INDIVIDUALS USING NON-INVASIVE TECHNIQUE OF PHONOCARDIOGRAPHY.", icon="⚠️")
 
 # Simulated Diagnosis
 SIMULATED_DIAGNOSES = {
