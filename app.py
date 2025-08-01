@@ -7,36 +7,17 @@ import io
 import datetime
 import json
 import os
-import google.generativeai as genai
 
-# Gemini API Key
-GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your actual API key
+# Gemini 2.5 Setup (NEW)
+from google import genai
+GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your actual key
 genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client()
 
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-pro",
-)
-
-def diagnose_with_gemini_text_only(sim_report, valve):
-    try:
-        prompt = f"""The following phonocardiogram waveform for the {valve} was analyzed using a signal model.
-        
-{sim_report}
-
-Please provide:
-- A possible diagnosis
-- Likely underlying pathology
-- Recommended next steps for investigation or treatment
-"""
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"Gemini Diagnosis Error: {e}"
-
-# Set Page Config
+# Streamlit Config
 st.set_page_config(page_title="AI PCG Diagnosis (Research Concept)", layout="wide")
 
-# Load Saved Cases
+# Case database
 CASE_DB = "saved_cases.json"
 if not os.path.exists(CASE_DB):
     with open(CASE_DB, "w") as f:
@@ -52,11 +33,7 @@ def save_case(case):
     with open(CASE_DB, "w") as f:
         json.dump(cases, f)
 
-# App Header
-st.title("😁 AI Phonocardiography Analysis")
-st.warning("**RESEARCH PURPOSE ONLY.** This is a research concept for AI-based detection of valvular heart disease using phonocardiography.", icon="⚠️")
-
-# Simulated Diagnosis
+# Diagnosis Logic (Simulated)
 SIMULATED_DIAGNOSES = {
     "normal": "**Likely Diagnosis:** Normal Heart Sounds\n\n**Analysis:** Normal S1/S2, no murmurs.",
     "as": "**Likely Diagnosis:** Aortic Stenosis (AS)\n\n**Analysis:** Crescendo-decrescendo midsystolic murmur.",
@@ -98,7 +75,27 @@ def get_simulated_diagnosis(audio_data, sample_rate, valve):
 
     return SIMULATED_DIAGNOSES["normal"]
 
-# Waveform Plot
+# NEW Gemini 2.5 API
+def diagnose_with_gemini_text_only(sim_report, valve):
+    try:
+        prompt = f"""The following phonocardiogram waveform for the {valve} was analyzed using a signal model.
+
+{sim_report}
+
+Please provide:
+- A possible diagnosis
+- Likely underlying pathology
+- Recommended next steps for investigation or treatment
+"""
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        return response.text
+    except Exception as e:
+        return f"Gemini Diagnosis Error: {e}"
+
+# Waveform Plotting
 def plot_waveform(sample_rate, audio_data, valve, amp_scale, noise_thresh, max_duration):
     fig, ax = plt.subplots(figsize=(10, 2))
     duration = len(audio_data) / sample_rate
@@ -112,7 +109,12 @@ def plot_waveform(sample_rate, audio_data, valve, amp_scale, noise_thresh, max_d
     ax.grid(True)
     return fig
 
-# Sidebar: Patient Info
+# --------------------- UI ---------------------
+
+st.title("🔥 AI Phonocardiography Analysis")
+st.warning("**RESEARCH PURPOSE ONLY.** This is a research concept for AI-based detection of valvular heart disease using phonocardiography.", icon="⚠️")
+
+# Sidebar Patient Info
 st.sidebar.header("🧑‍⚕️ Patient Info")
 name = st.sidebar.text_input("Name")
 age = st.sidebar.number_input("Age", 0, 120, 30)
@@ -120,12 +122,11 @@ gender = st.sidebar.selectbox("Gender", ["Male", "Female", "Other"])
 height = st.sidebar.number_input("Height (cm)", 50.0, 250.0, 170.0)
 weight = st.sidebar.number_input("Weight (kg)", 10.0, 200.0, 65.0)
 phone = st.sidebar.text_input("Phone")
-
 if height > 0:
     bmi = weight / ((height / 100) ** 2)
     st.sidebar.markdown(f"**BMI:** {bmi:.1f}")
 
-# Upload WAV files
+# Upload Section
 st.header("1. Upload PCG WAV files")
 cols = st.columns(4)
 valves = ["Aortic Valve", "Pulmonary Valve", "Mitral Valve", "Tricuspid Valve"]
@@ -164,7 +165,7 @@ if st.button("🔬 Generate Diagnostic Report", type="primary"):
             analysis_results[valve + "_gemini"] = gemini_result
             st.markdown("---")
 
-# Save Case Button
+# Save Case
 if st.button("💾 Save Case"):
     case = {
         "datetime": datetime.datetime.now().isoformat(),
