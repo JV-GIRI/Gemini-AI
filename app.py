@@ -8,13 +8,41 @@ import datetime
 import json
 import os
 from PIL import Image
-from google.generativeai import configure, GenerativeModel
+import google.generativeai as genai  # correct import
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import tempfile
 
-# Configure Gemini Pro
-GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"
-configure(api_key=GEMINI_API_KEY)
-gemini_model = GenerativeModel("gemini-pro")
+# Gemini Pro Setup
+GEMINI_API_KEY = "YOUR_API_KEY"  # Replace with your own Gemini API Key
+genai.configure(api_key=GEMINI_API_KEY)
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-pro",  # correct model name
+    safety_settings={
+        HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_VIOLENCE: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUAL: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    }
+)
+
+# Gemini Diagnosis
+def diagnose_with_gemini_text_only(sim_report, valve):
+    try:
+        prompt = f"""
+The following phonocardiogram waveform for the {valve} was analyzed using a signal model:
+
+{sim_report}
+
+Please provide:
+- A possible diagnosis
+- Likely underlying pathology
+- Recommended next steps for investigation or treatment
+"""
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Gemini Diagnosis Error: {e}"
 
 # Set Page Config
 st.set_page_config(page_title="AI PCG Diagnosis (Research Concept)", layout="wide")
