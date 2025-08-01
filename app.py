@@ -9,7 +9,7 @@ import json
 import os
 
 # Gemini 2.5 Setup (NEW)
-from google import genai
+import google.generativeai as genai
 GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your actual key
 genai.configure(api_key=GEMINI_API_KEY)
 client = genai.Client()
