@@ -9,7 +9,7 @@ import json
 import os
 from PIL import Image
 import google.generativeai as genai  # correct import
-from google.generativeai  # ✅ FIXED import
+from google.generativeai
 import tempfile
 
 # Gemini Pro Setup
