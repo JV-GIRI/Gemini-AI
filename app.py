@@ -7,26 +7,27 @@ import io
 import datetime
 import json
 import os
-from PIL import Image
-import google.generativeai as genai  # correct import
-from google.generativeai
-import tempfile
+import google.generativeai as genai
+from google.generativeai import HarmCategory, HarmBlockThreshold
+from google.generativeai.types import SafetySetting
 
-# Gemini Pro Setup
-GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your own Gemini API Key
+# Gemini API Key
+GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your actual API key
 genai.configure(api_key=GEMINI_API_KEY)
 
+# Correct safety settings list
+safety_settings = [
+    SafetySetting(category=HarmCategory.HARM_CATEGORY_DEROGATORY, threshold=HarmBlockThreshold.BLOCK_NONE),
+    SafetySetting(category=HarmCategory.HARM_CATEGORY_VIOLENCE, threshold=HarmBlockThreshold.BLOCK_NONE),
+    SafetySetting(category=HarmCategory.HARM_CATEGORY_SEXUAL, threshold=HarmBlockThreshold.BLOCK_NONE),
+    SafetySetting(category=HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=HarmBlockThreshold.BLOCK_NONE),
+]
+
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-pro",  # correct model name
-    safety_settings={
-        HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_VIOLENCE: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUAL: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    }
+    model_name="gemini-1.5-pro",
+    safety_settings=safety_settings
 )
 
-# Gemini Diagnosis
 def diagnose_with_gemini_text_only(sim_report, valve):
     try:
         prompt = f"""The following phonocardiogram waveform for the {valve} was analyzed using a signal model.
@@ -63,7 +64,7 @@ def save_case(case):
         json.dump(cases, f)
 
 # App Header
-st.title("🔥🙌🏻 AI Phonocardiography Analysis")
+st.title("😁 AI Phonocardiography Analysis")
 st.warning("**RESEARCH PURPOSE ONLY.** This is a research concept for AI-based detection of valvular heart disease using phonocardiography.", icon="⚠️")
 
 # Simulated Diagnosis
