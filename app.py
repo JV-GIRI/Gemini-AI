@@ -9,7 +9,7 @@ import json
 import os
 from PIL import Image
 import google.generativeai as genai  # correct import
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from google.generativeai import HarmCategory, HarmBlockThreshold  # ✅ FIXED import
 import tempfile
 
 # Gemini Pro Setup
@@ -29,9 +29,8 @@ model = genai.GenerativeModel(
 # Gemini Diagnosis
 def diagnose_with_gemini_text_only(sim_report, valve):
     try:
-        prompt = f"""
-The following phonocardiogram waveform for the {valve} was analyzed using a signal model:
-
+        prompt = f"""The following phonocardiogram waveform for the {valve} was analyzed using a signal model.
+        
 {sim_report}
 
 Please provide:
@@ -122,23 +121,6 @@ def plot_waveform(sample_rate, audio_data, valve, amp_scale, noise_thresh, max_d
     ax.set_xlim(0, min(duration, max_duration))
     ax.grid(True)
     return fig
-
-# Gemini Diagnosis (text-only)
-def diagnose_with_gemini_text_only(sim_report, valve):
-    try:
-        prompt = f"""The following phonocardiogram waveform for the {valve} was analyzed using a signal model.
-        
-{sim_report}
-
-Please provide:
-- A possible diagnosis
-- Likely underlying pathology
-- Recommended next steps for investigation or treatment
-"""
-        response = gemini_model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"Gemini Diagnosis Error: {e}"
 
 # Sidebar: Patient Info
 st.sidebar.header("🧑‍⚕️ Patient Info")
