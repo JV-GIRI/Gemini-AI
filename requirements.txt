@@ -1,8 +1,7 @@
 streamlit
 numpy
-pydub
-librosa
 scipy
+matplotlib
+pillow
 google-generativeai
 python-dotenv
-matplotlib.pyplot
