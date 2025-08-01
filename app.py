@@ -15,7 +15,6 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-pro",
-    safety_settings=safety_settings
 )
 
 def diagnose_with_gemini_text_only(sim_report, valve):
