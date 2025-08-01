@@ -13,14 +13,6 @@ import google.generativeai as genai
 GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your actual API key
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Correct safety settings list
-safety_settings = [
-    SafetySetting(category=HarmCategory.HARM_CATEGORY_DEROGATORY, threshold=HarmBlockThreshold.BLOCK_NONE),
-    SafetySetting(category=HarmCategory.HARM_CATEGORY_VIOLENCE, threshold=HarmBlockThreshold.BLOCK_NONE),
-    SafetySetting(category=HarmCategory.HARM_CATEGORY_SEXUAL, threshold=HarmBlockThreshold.BLOCK_NONE),
-    SafetySetting(category=HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=HarmBlockThreshold.BLOCK_NONE),
-]
-
 model = genai.GenerativeModel(
     model_name="gemini-1.5-pro",
     safety_settings=safety_settings
