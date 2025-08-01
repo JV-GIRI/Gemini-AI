@@ -9,7 +9,7 @@ import json
 import os
 from PIL import Image
 import google.generativeai as genai  # correct import
-from google.generativeai import HarmCategory, HarmBlockThreshold  # ✅ FIXED import
+from google.generativeai  # ✅ FIXED import
 import tempfile
 
 # Gemini Pro Setup
