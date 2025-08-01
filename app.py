@@ -11,10 +11,10 @@ from PIL import Image
 from google.generativeai import configure, GenerativeModel
 import tempfile
 
-# Configure Gemini
+# Configure Gemini Pro
 GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"
 configure(api_key=GEMINI_API_KEY)
-gemini_model = GenerativeModel("gemini-pro-vision")
+gemini_model = GenerativeModel("gemini-pro")
 
 # Set Page Config
 st.set_page_config(page_title="AI PCG Diagnosis (Research Concept)", layout="wide")
@@ -37,7 +37,7 @@ def save_case(case):
 
 # App Header
 st.title("❤️‍🔥 AI Phonocardiography Analysis")
-st.warning("**RESEARCH PURPOSE ONLY.** The prospective study of an application of **ARTIFICIAL INTELLIGENCE** in early detection of **RHEUMATIC VALVULAR HEART DISEASE** in asymptomatic individuals using non-invasive technique of phonocardiography.", icon="⚠️")
+st.warning("**RESEARCH PURPOSE ONLY.** This is a research concept for AI-based detection of valvular heart disease using phonocardiography.", icon="⚠️")
 
 # Simulated Diagnosis
 SIMULATED_DIAGNOSES = {
@@ -81,7 +81,7 @@ def get_simulated_diagnosis(audio_data, sample_rate, valve):
 
     return SIMULATED_DIAGNOSES["normal"]
 
-# Waveform Plot with Controls
+# Waveform Plot
 def plot_waveform(sample_rate, audio_data, valve, amp_scale, noise_thresh, max_duration):
     fig, ax = plt.subplots(figsize=(10, 2))
     duration = len(audio_data) / sample_rate
@@ -95,16 +95,19 @@ def plot_waveform(sample_rate, audio_data, valve, amp_scale, noise_thresh, max_d
     ax.grid(True)
     return fig
 
-# Gemini Diagnosis
-def diagnose_with_gemini_auto(fig, valve):
+# Gemini Diagnosis (text-only)
+def diagnose_with_gemini_text_only(sim_report, valve):
     try:
-        buf = io.BytesIO()
-        fig.savefig(buf, format='png')
-        buf.seek(0)
-        image = Image.open(buf)
-        response = gemini_model.generate_content([
-            f"Identify valvular heart diseases (AS, AR, MS, MR, TS, TR, PS, PR) based on this PCG waveform for {valve}.", image
-        ])
+        prompt = f"""The following phonocardiogram waveform for the {valve} was analyzed using a signal model.
+        
+{sim_report}
+
+Please provide:
+- A possible diagnosis
+- Likely underlying pathology
+- Recommended next steps for investigation or treatment
+"""
+        response = gemini_model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Gemini Diagnosis Error: {e}"
@@ -122,7 +125,7 @@ if height > 0:
     bmi = weight / ((height / 100) ** 2)
     st.sidebar.markdown(f"**BMI:** {bmi:.1f}")
 
-# Main Uploads
+# Upload WAV files
 st.header("1. Upload PCG WAV files")
 cols = st.columns(4)
 valves = ["Aortic Valve", "Pulmonary Valve", "Mitral Valve", "Tricuspid Valve"]
@@ -133,7 +136,6 @@ for i, valve in enumerate(valves):
 st.markdown("---")
 st.header("2. AI Analysis & Report")
 
-# Store analysis
 analysis_results = {}
 
 if st.button("🔬 Generate Diagnostic Report", type="primary"):
@@ -157,12 +159,12 @@ if st.button("🔬 Generate Diagnostic Report", type="primary"):
             analysis_results[valve] = sim_report
 
             st.markdown("##### 🧠 Gemini Diagnosis")
-            gemini_result = diagnose_with_gemini_auto(fig, valve)
+            gemini_result = diagnose_with_gemini_text_only(sim_report, valve)
             st.success(gemini_result)
             analysis_results[valve + "_gemini"] = gemini_result
             st.markdown("---")
 
-# Save Case
+# Save Case Button
 if st.button("💾 Save Case"):
     case = {
         "datetime": datetime.datetime.now().isoformat(),
@@ -178,7 +180,7 @@ if st.button("💾 Save Case"):
     save_case(case)
     st.success("Case saved successfully!")
 
-# Case History
+# View History
 if st.button("📂 View Case History"):
     st.header("📁 Past Cases")
     for case in reversed(load_cases()):
