@@ -8,8 +8,7 @@ import datetime
 import json
 import os
 import google.generativeai as genai
-from google.generativeai import HarmCategory, HarmBlockThreshold
-from google.generativeai.types import SafetySetting
+from google.generativeai import HarmCategory, HarmBlockThreshold, safetySettings
 
 # Gemini API Key
 GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your actual API key
