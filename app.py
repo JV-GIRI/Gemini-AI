@@ -13,7 +13,7 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import tempfile
 
 # Gemini Pro Setup
-GEMINI_API_KEY = "YOUR_API_KEY"  # Replace with your own Gemini API Key
+GEMINI_API_KEY = "AIzaSyDdGv--2i0pMbhH68heurl-LI1qJPJjzD4"  # Replace with your own Gemini API Key
 genai.configure(api_key=GEMINI_API_KEY)
 
 model = genai.GenerativeModel(
