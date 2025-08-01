@@ -41,7 +41,7 @@ json.dump(cases, f)
 
 App Header
 
-st.title("❤️‍🔥 AI Phonocardiography Analysis")
+st.title("🫀 AI Phonocardiography Analysis")
 st.warning("RESEARCH PURPOSE ONLY. This is a research concept for AI-based detection of valvular heart disease using phonocardiography.", icon="⚠️")
 
 Simulated Diagnosis
