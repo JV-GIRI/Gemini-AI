@@ -108,7 +108,7 @@ def plot_waveform(sample_rate, audio_data, valve, amp_scale, noise_thresh, max_d
 
 # --------------------- UI ---------------------      
 
-st.title("🫀 HEARTEST AI PCG Analysizer")      
+st.title("💓 HEARTEST AI PCG Analysizer")      
 st.warning("**RESEARCH PURPOSE ONLY.** This is a research concept for **AI-based detection** of rheumatic valvular heart disease **(RVHD)** using phonocardiography.", icon="⚠️")      
 
 # Sidebar Patient Info      
